@@ -2,13 +2,50 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>AHM Best Employee - Sistem Evaluasi Kepatuhan Pegawai</title>
   
   <!-- Load Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <style>body { font-family: 'Plus Jakarta Sans', sans-serif; }</style>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <style>
+    body { 
+      font-family: 'Plus Jakarta Sans', sans-serif; 
+      background-color: #f8fafc; /* Silver Muda / Slate 50 */
+      overflow-x: hidden;
+    }
+    
+    /* CSS Khusus untuk Running Text Tema Maroon-Black-Gold */
+    .marquee-wrapper {
+      overflow: hidden;
+      white-space: nowrap;
+      background: linear-gradient(90deg, #0f172a 0%, #881337 50%, #0f172a 100%); /* Black - Maroon - Black */
+      color: #fbbf24; /* Amber 400 / Gold */
+      width: 100%;
+      display: flex;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 2px solid #fbbf24; /* Border Gold */
+    }
+    .marquee-text {
+      display: inline-block;
+      padding-left: 100%;
+      animation: marquee 30s linear infinite; 
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      text-shadow: 0px 1px 2px rgba(0,0,0,0.8);
+    }
+    @keyframes marquee {
+      0% { transform: translate(0, 0); }
+      100% { transform: translate(-100%, 0); }
+    }
+
+    /* Custom Scrollbar untuk Tabel di Mobile */
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
 
   <!-- Load Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
@@ -22,17 +59,40 @@
   <!-- Load Environment Variables -->
   <script src="./env.js"></script>
 </head>
-<body class="bg-slate-100">
-  <div id="root"></div>
+<body class="flex flex-col min-h-screen">
+  <div id="root" class="flex flex-col flex-1"></div>
 
   <script type="text/babel">
     const { useState, useEffect, useMemo } = React;
     const supabase = window.supabase.createClient(window.env.SUPABASE_URL, window.env.SUPABASE_ANON_KEY);
 
     // ==========================================
-    // 1. KOMPONEN LOGIN
+    // 0. KOMPONEN RUNNING TEXT GLOBAL
     // ==========================================
-    function LoginPage({ onLogin }) {
+    function RunningTextBar() {
+      const [text, setText] = useState('');
+
+      useEffect(() => {
+        supabase.from('app_settings').select('value').eq('id', 'running_text').single()
+          .then(({data}) => { if (data) setText(data.value); });
+          
+        const handleUpdate = (e) => setText(e.detail);
+        window.addEventListener('runningTextChanged', handleUpdate);
+        return () => window.removeEventListener('runningTextChanged', handleUpdate);
+      }, []);
+
+      if (!text) return null;
+      return (
+        <div className="marquee-wrapper shrink-0 shadow-md z-50">
+          <span className="marquee-text">✨ {text} ✨</span>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 1. KOMPONEN LANDING PAGE & LOGIN
+    // ==========================================
+    function LandingPage({ onLogin }) {
       const [units, setUnits] = useState([]);
       const [unitId, setUnitId] = useState('');
       const [password, setPassword] = useState('');
@@ -62,46 +122,198 @@
       if (isLoading) return <div className="min-h-screen flex items-center justify-center font-bold text-slate-500">Memuat Data Sistem...</div>;
 
       return (
-        <div className="min-h-screen flex items-center justify-center p-4 bg-slate-900">
-          <div className="bg-white rounded-3xl shadow-xl w-full max-w-md overflow-hidden">
-            <div className="p-8 bg-blue-50/50 flex flex-col items-center border-b border-slate-100">
-              <img src="./logo_atma.png" alt="Logo" className="w-20 h-20 object-contain mb-4" />
-              <h1 className="text-xl font-extrabold text-slate-800 text-center">AHM Best Employee</h1>
-              <p className="text-xs text-slate-500 text-center mt-1">Sistem Evaluasi Kepatuhan Pegawai</p>
+        <div className="flex flex-col flex-1 bg-slate-100">
+          <RunningTextBar />
+          
+          {/* Header Maroon-Black-Gold */}
+          <header className="bg-gradient-to-r from-slate-900 via-rose-900 to-black px-4 md:px-6 py-4 shadow-lg flex items-center gap-3 md:gap-4 border-b-4 border-amber-500">
+            <img src="./logo_atma.png" alt="Logo AHM" className="w-10 h-10 md:w-14 md:h-14 object-contain bg-white rounded-full p-1" />
+            <div>
+              <h1 className="text-lg md:text-2xl font-extrabold text-amber-400 tracking-wide drop-shadow-md">AHM BEST EMPLOYEE</h1>
+              <p className="text-[10px] md:text-sm text-slate-300 font-medium">Sistem Evaluasi Kepatuhan & Disiplin Pegawai RS</p>
             </div>
-            <form onSubmit={handleLogin} className="p-8 space-y-5">
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1.5">Pilih Ruangan Anda</label>
-                <select 
-                  value={unitId} 
-                  onChange={e => setUnitId(e.target.value)} 
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                >
-                  {units.map(u => <option key={u.id} value={u.id}>{u.nama}</option>)}
-                </select>
+          </header>
+
+          <main className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-8 space-y-10 md:space-y-16">
+            
+            {/* Hero Section Adaptive */}
+            <div className="flex flex-col lg:flex-row gap-6 lg:gap-12 items-center">
+              
+              {/* Teks & Gambar Representatif */}
+              <div className="w-full lg:w-3/5 space-y-6 flex flex-col justify-center order-2 lg:order-1">
+                <div className="rounded-2xl md:rounded-3xl overflow-hidden shadow-2xl border-4 md:border-8 border-slate-300 bg-slate-200 relative group">
+                  <img src="https://images.unsplash.com/photo-1584982751601-97dcc096659c?ixlib=rb-4.0.3&auto=format&fit=crop&w=1200&q=80" alt="Kepatuhan Pegawai" className="w-full h-48 sm:h-64 md:h-[380px] object-cover transition-transform duration-700 group-hover:scale-105" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-900/80 to-transparent flex items-end">
+                    <div className="p-4 md:p-6 w-full">
+                      <p className="text-amber-400 font-bold text-sm md:text-lg drop-shadow-md">Integritas • Disiplin • Paripurna</p>
+                    </div>
+                  </div>
+                </div>
+                <div className="px-2 text-center lg:text-left">
+                  <h2 className="text-2xl md:text-4xl font-extrabold text-slate-800 leading-tight">Mewujudkan Pelayanan Prima & Integritas Tinggi</h2>
+                  <p className="text-slate-600 mt-3 md:mt-4 leading-relaxed text-sm md:text-lg">
+                    Aplikasi ini dirancang untuk memantau, mengevaluasi, dan merekapitulasi tingkat kepatuhan berseragam, atribut, dan budaya 5S pegawai secara <i>real-time</i> dan terpusat.
+                  </p>
+                </div>
               </div>
-              <div>
-                <label className="block text-sm font-bold text-slate-700 mb-1.5">Password</label>
-                <input 
-                  type="password" 
-                  value={password} 
-                  onChange={e => setPassword(e.target.value)} 
-                  placeholder="Masukkan password..."
-                  className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                  required
-                />
+
+              {/* Form Login Card */}
+              <div className="w-full lg:w-2/5 flex justify-center order-1 lg:order-2">
+                <div className="bg-white rounded-2xl md:rounded-3xl shadow-2xl w-full max-w-md overflow-hidden border-t-8 border-rose-800">
+                  <div className="p-6 md:p-8 bg-gradient-to-b from-slate-100 to-white flex flex-col items-center border-b border-slate-200">
+                    <div className="p-3 md:p-4 bg-slate-900 rounded-full shadow-lg mb-3 md:mb-4 border-2 border-amber-400">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
+                    </div>
+                    <h2 className="text-xl md:text-2xl font-bold text-slate-900 text-center">Login Evaluator</h2>
+                    <p className="text-[11px] md:text-xs text-rose-700 font-bold text-center mt-1 uppercase tracking-wider">Khusus Kepala Ruangan / Instalasi</p>
+                  </div>
+                  <form onSubmit={handleLogin} className="p-6 md:p-8 space-y-4 md:space-y-5">
+                    <div>
+                      <label className="block text-xs md:text-sm font-bold text-slate-700 mb-1.5">Pilih Ruangan Anda</label>
+                      <select value={unitId} onChange={e => setUnitId(e.target.value)} className="w-full px-3 md:px-4 py-2.5 md:py-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-800 focus:outline-none font-medium text-sm">
+                        {units.map(u => <option key={u.id} value={u.id}>[{u.kategori}] {u.nama}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs md:text-sm font-bold text-slate-700 mb-1.5">Password</label>
+                      <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Masukkan password ruangan..." className="w-full px-3 md:px-4 py-2.5 md:py-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-800 focus:outline-none text-sm" required />
+                    </div>
+                    <button type="submit" className="w-full py-3 md:py-3.5 bg-gradient-to-r from-rose-800 to-slate-900 hover:from-rose-900 hover:to-black text-amber-400 font-bold rounded-xl transition-all shadow-md hover:shadow-lg mt-4 text-sm md:text-base border border-slate-800">
+                      Masuk ke Sistem
+                    </button>
+                  </form>
+                </div>
               </div>
-              <button type="submit" className="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-colors mt-4">
-                Masuk ke Aplikasi
-              </button>
-            </form>
+
+            </div>
+
+            {/* Dashboard Statistik (Di Halaman Landing) */}
+            <div className="pt-8 border-t-2 border-slate-300">
+              <div className="mb-6 text-center">
+                <h3 className="text-xl md:text-2xl font-extrabold text-slate-800 uppercase tracking-wide">📊 Statistik Kepatuhan Rumah Sakit</h3>
+                <p className="text-xs md:text-sm text-slate-500 mt-1">Laporan transparansi kelengkapan evaluasi pegawai per unit / ruangan.</p>
+              </div>
+              <DashboardStats units={units} />
+            </div>
+
+          </main>
+
+          {/* Footer dengan Nama Kreator */}
+          <footer className="bg-slate-900 text-slate-400 py-6 md:py-8 mt-auto border-t-4 border-rose-900">
+            <div className="max-w-7xl mx-auto px-4 text-center">
+              <p className="text-xs md:text-sm font-medium tracking-wide text-slate-300">
+                Didesain dan dikembangkan oleh : <strong className="text-amber-400">Riandy, S.Kep</strong>
+              </p>
+              <p className="text-[10px] md:text-xs mt-1.5 text-slate-500">© 2024 RSJD Atma Husada Mahakam. Hak Cipta Dilindungi.</p>
+            </div>
+          </footer>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 2. KOMPONEN DASHBOARD STATISTIK TW
+    // ==========================================
+    function DashboardStats({ units }) {
+      const currentYear = new Date().getFullYear().toString();
+      const [year, setYear] = useState(currentYear);
+      const [tw, setTw] = useState('1'); 
+      const [allStaff, setAllStaff] = useState([]);
+      const [evalRecords, setEvalRecords] = useState([]);
+      const [isLoading, setIsLoading] = useState(true);
+
+      useEffect(() => {
+        supabase.from('master_staff').select('unit_id, nama').then(({data}) => { if (data) setAllStaff(data); });
+      }, []);
+
+      useEffect(() => {
+        const fetchStats = async () => {
+          setIsLoading(true);
+          let startDate, endDate;
+          if (tw === '1') { startDate = `${year}-01-01`; endDate = `${year}-03-31`; }
+          else if (tw === '2') { startDate = `${year}-04-01`; endDate = `${year}-06-30`; }
+          else if (tw === '3') { startDate = `${year}-07-01`; endDate = `${year}-09-30`; }
+          else if (tw === '4') { startDate = `${year}-10-01`; endDate = `${year}-12-31`; }
+
+          const { data } = await supabase.from('evaluation_records').select('unit_id, nama')
+            .gte('tanggal', startDate).lte('tanggal', endDate);
+            
+          if (data) setEvalRecords(data);
+          setIsLoading(false);
+        };
+        fetchStats();
+      }, [year, tw]);
+
+      const tableData = units.map(u => {
+        const staffInUnit = allStaff.filter(s => s.unit_id === u.id);
+        const totalStaff = staffInUnit.length;
+        const evalsInUnit = evalRecords.filter(e => e.unit_id === u.id);
+        const uniqueEvaluated = new Set(evalsInUnit.map(e => e.nama.toLowerCase().trim())).size;
+        const percentage = totalStaff === 0 ? 0 : Math.round((uniqueEvaluated / totalStaff) * 100);
+
+        return { id: u.id, nama: u.nama, kategori: u.kategori, total: totalStaff, dinilai: uniqueEvaluated, percentage: Math.min(100, percentage) };
+      });
+
+      return (
+        <div className="bg-white rounded-2xl md:rounded-3xl shadow-lg border border-slate-200 overflow-hidden">
+          <div className="p-4 md:p-6 border-b border-slate-200 bg-slate-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h2 className="text-base md:text-lg font-bold text-slate-900">Statistik Triwulan (TW)</h2>
+            </div>
+            <div className="flex gap-2 w-full md:w-auto">
+              <select value={year} onChange={e => setYear(e.target.value)} className="flex-1 md:flex-none px-3 md:px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-800 outline-none font-bold text-slate-700 text-xs md:text-sm">
+                <option value="2023">2023</option><option value="2024">2024</option><option value="2025">2025</option><option value="2026">2026</option>
+              </select>
+              <select value={tw} onChange={e => setTw(e.target.value)} className="flex-1 md:flex-none px-3 md:px-4 py-2 border border-rose-200 rounded-xl focus:ring-2 focus:ring-rose-800 outline-none font-bold text-rose-900 bg-rose-50 text-xs md:text-sm">
+                <option value="1">TW I</option><option value="2">TW II</option><option value="3">TW III</option><option value="4">TW IV</option>
+              </select>
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            {isLoading ? (
+              <div className="p-12 text-center text-slate-500 font-bold text-sm">Mengkalkulasi Statistik...</div>
+            ) : (
+              <table className="w-full text-left text-xs md:text-sm border-collapse min-w-[600px]">
+                <thead className="bg-slate-900 text-amber-400">
+                  <tr>
+                    <th className="p-3 md:p-4 font-semibold border-b border-slate-700 text-center">No</th>
+                    <th className="p-3 md:p-4 font-semibold border-b border-slate-700">Nama Ruangan / Instalasi</th>
+                    <th className="p-3 md:p-4 font-semibold text-center border-b border-slate-700">Total Pegawai</th>
+                    <th className="p-3 md:p-4 font-semibold text-center border-b border-slate-700">Selesai Dinilai</th>
+                    <th className="p-3 md:p-4 font-semibold text-center border-b border-slate-700">Persentase Capaian</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-200 bg-white">
+                  {tableData.sort((a,b) => b.percentage - a.percentage).map((row, index) => (
+                    <tr key={row.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="p-3 md:p-4 font-mono text-slate-500 text-center">{index + 1}</td>
+                      <td className="p-3 md:p-4 font-bold text-slate-800">
+                        {row.nama} 
+                        <span className="block md:inline mt-1 md:mt-0 text-[9px] md:text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded md:ml-2 font-normal uppercase">{row.kategori}</span>
+                      </td>
+                      <td className="p-3 md:p-4 text-center font-bold text-slate-600">{row.total}</td>
+                      <td className="p-3 md:p-4 text-center font-bold text-rose-800">{row.dinilai}</td>
+                      <td className="p-3 md:p-4 text-center">
+                        <div className="flex items-center gap-2 justify-center">
+                          <div className="w-16 md:w-24 bg-slate-200 rounded-full h-2 md:h-2.5 overflow-hidden">
+                            <div className={`h-full rounded-full ${row.percentage >= 100 ? 'bg-emerald-500' : row.percentage >= 50 ? 'bg-amber-500' : 'bg-rose-600'}`} style={{ width: `${row.percentage}%` }}></div>
+                          </div>
+                          <span className={`text-[10px] md:text-xs font-bold w-8 md:w-10 text-left ${row.percentage >= 100 ? 'text-emerald-600' : row.percentage >= 50 ? 'text-amber-600' : 'text-rose-600'}`}>{row.percentage}%</span>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
         </div>
       );
     }
 
     // ==========================================
-    // 2. KOMPONEN KELOLA PEGAWAI (EDIT DATA)
+    // 3. KOMPONEN KELOLA PEGAWAI
     // ==========================================
     function StaffManager({ session, units }) {
       const [staffList, setStaffList] = useState([]);
@@ -152,8 +364,7 @@
         
         setSelectedStaffId('');
         setForm({ nama: '', jabatan: '', unit_id: session.id });
-        await fetchStaff();
-        await fetchAllStaff();
+        await fetchStaff(); await fetchAllStaff();
         setIsProcessing(false);
         alert('Data pegawai berhasil disimpan!');
       };
@@ -167,18 +378,18 @@
       const filteredStaffList = staffList.filter(s => s.nama.toLowerCase().includes(searchQuery.toLowerCase()));
 
       return (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="p-6 border-b border-slate-200 bg-slate-50">
-            <h2 className="text-lg font-bold text-slate-800">Manajemen Pegawai Terpusat</h2>
-            <p className="text-sm text-slate-500">Tarik nama dari ruangan lain, perbarui biodata, atau tambahkan pegawai baru.</p>
+        <div className="bg-white rounded-2xl md:rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="p-4 md:p-6 border-b border-slate-200 bg-slate-50">
+            <h2 className="text-base md:text-lg font-bold text-slate-800">Manajemen Pegawai Terpusat</h2>
+            <p className="text-[11px] md:text-sm text-slate-500">Tarik nama dari ruangan lain, perbarui biodata, atau tambahkan pegawai baru.</p>
           </div>
-          <div className="p-6 border-b border-slate-200">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+          <div className="p-4 md:p-6 border-b border-slate-200">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-5">
               <div className="md:col-span-2">
-                <label className="block text-xs font-bold text-slate-700 mb-2">1. Pilih / Cari Nama Pegawai dari Database RS</label>
-                <select value={selectedStaffId} onChange={handleSelectStaff} className="w-full px-4 py-2.5 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 font-medium">
+                <label className="block text-xs font-bold text-slate-700 mb-1.5">1. Pilih / Cari Nama Pegawai dari Database RS</label>
+                <select value={selectedStaffId} onChange={handleSelectStaff} className="w-full px-3 py-2.5 md:py-3 bg-slate-50 border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-800 font-medium text-sm">
                   <option value="">-- Ketik Huruf Awal / Pilih Pegawai --</option>
-                  <option value="NEW" className="font-bold text-blue-600">➕ BUAT NAMA PEGAWAI BARU</option>
+                  <option value="NEW" className="font-bold text-rose-700">➕ BUAT NAMA PEGAWAI BARU</option>
                   {allStaff.map(s => {
                      const uName = units.find(u => u.id === s.unit_id)?.nama || 'Tanpa Ruangan';
                      return <option key={s.id} value={s.id}>{s.nama} - (Saat ini di: {uName})</option>;
@@ -188,16 +399,16 @@
               {(selectedStaffId) && (
                 <>
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-2">Nama Lengkap (Bisa Diubah)</label>
-                    <input type="text" value={form.nama} onChange={e=>setForm({...form, nama: e.target.value})} className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500" required />
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">Nama Lengkap (Bisa Diubah)</label>
+                    <input type="text" value={form.nama} onChange={e=>setForm({...form, nama: e.target.value})} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-800 text-sm" required />
                   </div>
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-2">Jabatan / Profesi</label>
-                    <input type="text" value={form.jabatan} onChange={e=>setForm({...form, jabatan: e.target.value})} className="w-full px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500" />
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">Jabatan / Profesi</label>
+                    <input type="text" value={form.jabatan} onChange={e=>setForm({...form, jabatan: e.target.value})} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-800 text-sm" />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-xs font-bold text-slate-700 mb-2">Ruangan / Unit Tugas (Ubah untuk memindah pegawai)</label>
-                    <select value={form.unit_id} onChange={e=>setForm({...form, unit_id: e.target.value})} className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none">
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">Ruangan / Unit Tugas (Ubah untuk memindah pegawai)</label>
+                    <select value={form.unit_id} onChange={e=>setForm({...form, unit_id: e.target.value})} className="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-800 focus:outline-none text-sm">
                       {units.map(u => <option key={u.id} value={u.id}>[{u.kategori}] {u.nama}</option>)}
                     </select>
                   </div>
@@ -206,35 +417,35 @@
             </div>
             {(selectedStaffId) && (
               <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-slate-100">
-                <button type="button" onClick={() => { setSelectedStaffId(''); setForm({nama:'', jabatan:'', unit_id:session.id}) }} className="px-5 py-2.5 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300">Batal Edit</button>
-                <button type="button" onClick={handleSave} disabled={isProcessing} className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl disabled:opacity-50">
+                <button type="button" onClick={() => { setSelectedStaffId(''); setForm({nama:'', jabatan:'', unit_id:session.id}) }} className="px-4 py-2 md:py-2.5 bg-slate-200 text-slate-700 font-bold rounded-xl hover:bg-slate-300 text-xs md:text-sm">Batal Edit</button>
+                <button type="button" onClick={handleSave} disabled={isProcessing} className="px-4 py-2 md:py-2.5 bg-gradient-to-r from-rose-800 to-black hover:from-rose-900 text-amber-400 font-bold rounded-xl disabled:opacity-50 text-xs md:text-sm">
                   {selectedStaffId === 'NEW' ? 'Simpan Pegawai Baru' : 'Simpan Perubahan Data'}
                 </button>
               </div>
             )}
           </div>
-          <div className="p-6">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-              <h3 className="font-bold text-slate-800">Daftar Anggota di {session.nama}</h3>
-              <input type="text" placeholder="🔍 Cari anggota ruangan ini..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="px-4 py-2 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none w-full sm:w-64 bg-slate-50" />
+          <div className="p-4 md:p-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+              <h3 className="font-bold text-slate-800 text-sm md:text-base">Daftar Anggota di {session.nama}</h3>
+              <input type="text" placeholder="🔍 Cari anggota..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="px-3 py-2 border border-slate-300 rounded-xl text-xs md:text-sm focus:ring-2 focus:ring-rose-800 focus:outline-none w-full sm:w-64 bg-slate-50" />
             </div>
             <div className="overflow-x-auto border border-slate-200 rounded-xl">
-              <table className="w-full text-left text-sm border-collapse">
-                <thead className="bg-slate-50 text-slate-600">
+              <table className="w-full text-left text-xs md:text-sm border-collapse min-w-[500px]">
+                <thead className="bg-slate-900 text-amber-400">
                   <tr>
-                    <th className="p-3 font-semibold border-b border-slate-200">Nama Pegawai</th>
-                    <th className="p-3 font-semibold border-b border-slate-200">Jabatan</th>
-                    <th className="p-3 font-semibold border-b border-slate-200 text-center">Aksi</th>
+                    <th className="p-3 border-b border-slate-700">Nama Pegawai</th>
+                    <th className="p-3 border-b border-slate-700">Jabatan</th>
+                    <th className="p-3 border-b border-slate-700 text-center">Aksi</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody className="bg-white divide-y divide-slate-100">
                   {filteredStaffList.map(s => (
-                    <tr key={s.id} className="border-b border-slate-100 hover:bg-blue-50/30">
+                    <tr key={s.id} className="hover:bg-rose-50 transition-colors">
                       <td className="p-3 font-bold text-slate-800">{s.nama}</td>
                       <td className="p-3 text-slate-500">{s.jabatan || '-'}</td>
                       <td className="p-3 text-center space-x-2">
-                        <button onClick={() => handleEditFromTable(s)} className="px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-xs font-bold transition-colors">Edit / Pindah</button>
-                        <button onClick={() => handleDelete(s.id)} className="px-3 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs font-bold transition-colors">Hapus</button>
+                        <button onClick={() => handleEditFromTable(s)} className="px-2 md:px-3 py-1 bg-slate-200 text-slate-700 rounded-lg text-[10px] md:text-xs font-bold transition-colors">Edit / Pindah</button>
+                        <button onClick={() => handleDelete(s.id)} className="px-2 md:px-3 py-1 bg-rose-100 text-rose-700 rounded-lg text-[10px] md:text-xs font-bold transition-colors">Hapus</button>
                       </td>
                     </tr>
                   ))}
@@ -248,69 +459,56 @@
     }
 
     // ==========================================
-    // 3. KOMPONEN REKAP & PENCARIAN
+    // 4. KOMPONEN REKAP & PENCARIAN
     // ==========================================
     function RecapView({ session }) {
       const [records, setRecords] = useState([]);
       const [searchQuery, setSearchQuery] = useState('');
 
-      useEffect(() => { fetchRecords(); }, []);
-
-      const fetchRecords = async () => {
-        const { data } = await supabase.from('evaluation_records').select('*').eq('unit_id', session.id).order('created_at', { ascending: false });
-        if (data) setRecords(data);
-      };
+      useEffect(() => {
+        supabase.from('evaluation_records').select('*').eq('unit_id', session.id).order('created_at', { ascending: false })
+          .then(({data}) => { if(data) setRecords(data); });
+      }, [session.id]);
 
       const handleDelete = async (id) => {
         if(!window.confirm('Hapus data evaluasi ini?')) return;
         await supabase.from('evaluation_records').delete().eq('id', id);
-        fetchRecords();
+        setRecords(records.filter(r => r.id !== id));
       };
 
       const filteredRecords = records.filter(r => r.nama.toLowerCase().includes(searchQuery.toLowerCase()));
 
       return (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="p-6 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <h2 className="text-lg font-bold text-slate-800">Rekapitulasi Penilaian - {session.nama}</h2>
-            <div className="flex w-full md:w-64">
-              <input type="text" placeholder="🔍 Cari nama evaluasi..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm" />
-            </div>
+        <div className="bg-white rounded-2xl md:rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="p-4 md:p-6 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <h2 className="text-base md:text-lg font-bold text-slate-800">Rekapitulasi Penilaian - {session.nama}</h2>
+            <input type="text" placeholder="🔍 Cari nama evaluasi..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)} className="w-full md:w-64 px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-rose-800 text-xs md:text-sm" />
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm border-collapse">
-              <thead className="bg-slate-100 text-slate-600">
+            <table className="w-full text-left text-xs md:text-sm border-collapse min-w-[600px]">
+              <thead className="bg-slate-900 text-amber-400">
                 <tr>
-                  <th className="p-4 font-semibold border-b">Tanggal</th>
-                  <th className="p-4 font-semibold border-b">Nama Pegawai</th>
-                  <th className="p-4 font-semibold text-center border-b">Skala (1-5)</th>
-                  <th className="p-4 font-semibold text-center border-b">Etika (Ya)</th>
-                  <th className="p-4 font-semibold text-center border-b">Aksi</th>
+                  <th className="p-3 md:p-4 font-semibold border-b border-slate-700">Tanggal</th>
+                  <th className="p-3 md:p-4 font-semibold border-b border-slate-700">Nama Pegawai</th>
+                  <th className="p-3 md:p-4 font-semibold text-center border-b border-slate-700">Skala (1-5)</th>
+                  <th className="p-3 md:p-4 font-semibold text-center border-b border-slate-700">Etika (Ya)</th>
+                  <th className="p-3 md:p-4 font-semibold text-center border-b border-slate-700">Aksi</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
+              <tbody className="divide-y divide-slate-100 bg-white">
                 {filteredRecords.length === 0 ? (
                   <tr><td colSpan="5" className="p-8 text-center text-slate-500">Tidak ada data evaluasi ditemukan.</td></tr>
                 ) : (
                   filteredRecords.map(r => {
                     const avgSkala = ((r.seragam + r.atribut + r.sepatu + r.salam)/4).toFixed(1);
-                    const etikaValues = [r.id_card, r.pin_logo, r.salam_prima, r.seragam_aturan, r.ramah_sopan, r.tanggung_jawab, r.tolak_hadiah, r.sesuai_wewenang, r.hadir_rapat, r.bekerja_penuh_tj];
-                    const totalYa = etikaValues.filter(v => v === 'Ya').length;
+                    const totalYa = [r.id_card, r.pin_logo, r.salam_prima, r.seragam_aturan, r.ramah_sopan, r.tanggung_jawab, r.tolak_hadiah, r.sesuai_wewenang, r.hadir_rapat, r.bekerja_penuh_tj].filter(v => v === 'Ya').length;
                     return (
-                      <tr key={r.id} className="hover:bg-blue-50/30 transition-colors">
-                        <td className="p-4 text-xs text-slate-500">{new Date(r.created_at).toLocaleDateString('id-ID')}</td>
-                        <td className="p-4 font-bold text-slate-800">{r.nama}</td>
-                        <td className="p-4 text-center">
-                          <span className={`px-3 py-1 rounded-full font-bold text-xs ${avgSkala >= 4 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{avgSkala} / 5.0</span>
-                        </td>
-                        <td className="p-4 text-center">
-                          <span className={`px-3 py-1 rounded-full font-bold text-xs ${totalYa >= 8 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
-                            {totalYa} dari 10 (Ya)
-                          </span>
-                        </td>
-                        <td className="p-4 text-center">
-                          <button onClick={() => handleDelete(r.id)} className="px-3 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs font-bold">Hapus</button>
-                        </td>
+                      <tr key={r.id} className="hover:bg-rose-50 transition-colors">
+                        <td className="p-3 md:p-4 text-[10px] md:text-xs text-slate-500">{new Date(r.created_at).toLocaleDateString('id-ID')}</td>
+                        <td className="p-3 md:p-4 font-bold text-slate-800">{r.nama}</td>
+                        <td className="p-3 md:p-4 text-center"><span className={`px-2 py-1 rounded-full font-bold text-[10px] md:text-xs ${avgSkala >= 4 ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}`}>{avgSkala} / 5.0</span></td>
+                        <td className="p-3 md:p-4 text-center"><span className={`px-2 py-1 rounded-full font-bold text-[10px] md:text-xs ${totalYa >= 8 ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>{totalYa} (Ya)</span></td>
+                        <td className="p-3 md:p-4 text-center"><button onClick={() => handleDelete(r.id)} className="px-2 py-1 bg-rose-100 text-rose-700 rounded-md text-[10px] md:text-xs font-bold">Hapus</button></td>
                       </tr>
                     );
                   })
@@ -323,230 +521,91 @@
     }
 
     // ==========================================
-    // 4. KOMPONEN FORM INPUT EVALUASI
+    // 5. KOMPONEN FORM INPUT EVALUASI
     // ==========================================
     function EvaluasiForm({ session }) {
       const [staffList, setStaffList] = useState([]);
       const [nama, setNama] = useState('');
-      const [tanggal, setTanggal] = useState(new Date().toISOString().split('T')[0]); // Default hari ini
+      const [tanggal, setTanggal] = useState(new Date().toISOString().split('T')[0]);
       const [isSubmitting, setIsSubmitting] = useState(false);
       
       const [skala, setSkala] = useState({ seragam: 5, atribut: 5, sepatu: 5, salam: 5 });
-      const [etika, setEtika] = useState({
-        id_card: 'Ya', pin_logo: 'Ya', salam_prima: 'Ya', seragam_aturan: 'Ya',
-        ramah_sopan: 'Ya', tanggung_jawab: 'Ya', tolak_hadiah: 'Ya',
-        sesuai_wewenang: 'Ya', hadir_rapat: 'Ya', bekerja_penuh_tj: 'Ya'
-      });
+      const [etika, setEtika] = useState({ id_card: 'Ya', pin_logo: 'Ya', salam_prima: 'Ya', seragam_aturan: 'Ya', ramah_sopan: 'Ya', tanggung_jawab: 'Ya', tolak_hadiah: 'Ya', sesuai_wewenang: 'Ya', hadir_rapat: 'Ya', bekerja_penuh_tj: 'Ya' });
 
       useEffect(() => {
-        supabase.from('master_staff').select('*').eq('unit_id', session.id).order('nama')
-          .then(({data}) => { if (data) setStaffList(data); });
-      }, [session]);
+        supabase.from('master_staff').select('*').eq('unit_id', session.id).order('nama').then(({data}) => { if (data) setStaffList(data); });
+      }, [session.id]);
 
       const handleSubmit = async (e) => {
         e.preventDefault();
-        if (!nama) return alert('Pilih nama pegawai terlebih dahulu!');
-        
+        if (!nama) return alert('Pilih nama pegawai!');
         setIsSubmitting(true);
-        const { error } = await supabase.from('evaluation_records').insert([{ 
-          unit_id: session.id, unit_nama: session.nama, nama, tanggal, ...skala, ...etika 
-        }]);
-
+        const { error } = await supabase.from('evaluation_records').insert([{ unit_id: session.id, unit_nama: session.nama, nama, tanggal, ...skala, ...etika }]);
         if (error) alert('Gagal: ' + error.message);
         else {
           alert('Berhasil menyimpan penilaian untuk ' + nama);
-          setNama('');
-          setSkala({ seragam: 5, atribut: 5, sepatu: 5, salam: 5 });
-          setEtika({
-            id_card: 'Ya', pin_logo: 'Ya', salam_prima: 'Ya', seragam_aturan: 'Ya',
-            ramah_sopan: 'Ya', tanggung_jawab: 'Ya', tolak_hadiah: 'Ya',
-            sesuai_wewenang: 'Ya', hadir_rapat: 'Ya', bekerja_penuh_tj: 'Ya'
-          });
+          setNama(''); setSkala({ seragam: 5, atribut: 5, sepatu: 5, salam: 5 });
+          setEtika({ id_card: 'Ya', pin_logo: 'Ya', salam_prima: 'Ya', seragam_aturan: 'Ya', ramah_sopan: 'Ya', tanggung_jawab: 'Ya', tolak_hadiah: 'Ya', sesuai_wewenang: 'Ya', hadir_rapat: 'Ya', bekerja_penuh_tj: 'Ya' });
         }
         setIsSubmitting(false);
       };
 
-      const skalaQuestions = [
-        { key: 'seragam', label: '1. Menggunakan seragam sesuai ketentuan RS' },
-        { key: 'atribut', label: '2. Menggunakan atribut kerja (Name Tag, Pin, ID Card)' },
-        { key: 'sepatu', label: '3. Menggunakan sepatu saat pelayanan' },
-        { key: 'salam', label: '4. Menerapkan salam prima di lingkungan RS' }
-      ];
-
-      const etikaQuestions = [
-        { key: 'id_card', label: '1. Menggunakan identitas nama / ID card' },
-        { key: 'pin_logo', label: '2. Menggunakan pin / atribut / logo' },
-        { key: 'salam_prima', label: '3. Menerapkan salam prima' },
-        { key: 'seragam_aturan', label: '4. Menggunakan seragam sesuai aturan' },
-        { key: 'ramah_sopan', label: '5. Ramah, sopan, dan menghormati pasien' },
-        { key: 'tanggung_jawab', label: '6. Tanggung jawab, jujur & profesional' },
-        { key: 'tolak_hadiah', label: '7. Tidak menerima hadiah/imbalan' },
-        { key: 'sesuai_wewenang', label: '8. Melaksanakan pelayanan sesuai wewenang' },
-        { key: 'hadir_rapat', label: '9. Memenuhi panggilan kedinasan/rapat' },
-        { key: 'bekerja_penuh_tj', label: '10. Bekerja dengan penuh tanggungjawab' }
-      ];
+      const skalaQ = [{ k: 'seragam', l: '1. Seragam sesuai ketentuan' }, { k: 'atribut', l: '2. Atribut (ID Card, Pin)' }, { k: 'sepatu', l: '3. Sepatu saat pelayanan' }, { k: 'salam', l: '4. Menerapkan salam prima' }];
+      const etikaQ = [{ k: 'id_card', l: '1. Menggunakan ID card' }, { k: 'pin_logo', l: '2. Menggunakan pin logo' }, { k: 'salam_prima', l: '3. Menerapkan salam prima' }, { k: 'seragam_aturan', l: '4. Seragam sesuai aturan' }, { k: 'ramah_sopan', l: '5. Ramah & sopan' }, { k: 'tanggung_jawab', l: '6. Tanggung jawab & jujur' }, { k: 'tolak_hadiah', l: '7. Menolak imbalan/gratifikasi' }, { k: 'sesuai_wewenang', l: '8. Sesuai wewenang tugas' }, { k: 'hadir_rapat', l: '9. Hadir panggilan dinas' }, { k: 'bekerja_penuh_tj', l: '10. Bekerja penuh tanggungjawab' }];
 
       return (
-        <form onSubmit={handleSubmit} className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="p-6 bg-blue-50/50 border-b border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-4">
+        <form onSubmit={handleSubmit} className="bg-white rounded-2xl md:rounded-3xl shadow-sm border border-slate-200 overflow-hidden">
+          <div className="p-4 md:p-6 bg-slate-50 border-b border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-2">Tanggal Evaluasi</label>
-              <input type="date" value={tanggal} onChange={e => setTanggal(e.target.value)} className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none" required />
+              <label className="block text-xs md:text-sm font-bold text-slate-700 mb-1.5">Tanggal Evaluasi</label>
+              <input type="date" value={tanggal} onChange={e => setTanggal(e.target.value)} className="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-800 text-sm" required />
             </div>
             <div>
-              <label className="block text-sm font-bold text-slate-700 mb-2">Pilih Pegawai yang Dinilai</label>
-              <select value={nama} onChange={e => setNama(e.target.value)} className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:outline-none" required>
-                <option value="" disabled>-- Pilih Pegawai dari {session.nama} --</option>
-                {staffList.map(s => <option key={s.id} value={s.nama}>{s.nama} {s.jabatan ? `(${s.jabatan})` : ''}</option>)}
+              <label className="block text-xs md:text-sm font-bold text-slate-700 mb-1.5">Pilih Pegawai dari {session.nama}</label>
+              <select value={nama} onChange={e => setNama(e.target.value)} className="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-800 text-sm" required>
+                <option value="" disabled>-- Pilih Pegawai --</option>
+                {staffList.map(s => <option key={s.id} value={s.nama}>{s.nama}</option>)}
               </select>
             </div>
           </div>
-          <div className="p-6 border-b border-slate-200">
-            <h3 className="font-bold mb-4 uppercase text-sm tracking-wider">A. Skala Kepatuhan (1 - 5)</h3>
+          
+          <div className="p-4 md:p-6 border-b border-slate-200">
+            <h3 className="font-bold mb-3 md:mb-4 uppercase text-xs md:text-sm tracking-wider text-rose-900">A. Skala Kepatuhan (1 - 5)</h3>
             <div className="space-y-3">
-              {skalaQuestions.map(q => (
-                <div key={q.key} className="flex flex-col md:flex-row justify-between md:items-center p-3 bg-slate-50 rounded-xl border border-slate-200">
-                  <span className="text-sm font-medium">{q.label}</span>
-                  <div className="flex gap-1.5 mt-2 md:mt-0">
+              {skalaQ.map(q => (
+                <div key={q.k} className="flex flex-col sm:flex-row justify-between sm:items-center p-3 bg-white rounded-xl border border-slate-200 shadow-sm gap-2">
+                  <span className="text-xs md:text-sm font-medium text-slate-800">{q.l}</span>
+                  <div className="flex gap-1.5 justify-between sm:justify-end w-full sm:w-auto">
                     {[1,2,3,4,5].map(v => (
-                      <button key={v} type="button" onClick={() => setSkala({...skala, [q.key]: v})} className={`w-9 h-9 rounded-lg font-bold transition-all ${skala[q.key] === v ? 'bg-blue-600 text-white shadow-sm' : 'bg-white border border-slate-300 text-slate-600'}`}>{v}</button>
+                      <button key={v} type="button" onClick={() => setSkala({...skala, [q.k]: v})} className={`flex-1 sm:flex-none w-8 h-8 md:w-10 md:h-10 rounded-lg font-bold transition-all text-xs md:text-sm ${skala[q.k] === v ? 'bg-gradient-to-br from-rose-800 to-slate-900 text-amber-400 shadow-md border-rose-900' : 'bg-slate-50 border border-slate-300 text-slate-600 hover:bg-slate-200'}`}>{v}</button>
                     ))}
                   </div>
                 </div>
               ))}
             </div>
           </div>
-          <div className="p-6">
-            <h3 className="font-bold mb-4 uppercase text-sm tracking-wider">B. Indikator Etika (Ya / Tidak)</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              {etikaQuestions.map((q) => (
-                <div key={q.key} className="flex items-center justify-between gap-2 p-3 bg-white border border-slate-200 rounded-xl">
-                  <span className="text-xs font-medium pr-2">{q.label}</span>
-                  <div className="flex gap-1 shrink-0">
-                    <button type="button" onClick={() => setEtika({ ...etika, [q.key]: 'Ya' })} className={`px-3 py-1.5 text-xs font-bold rounded-lg ${etika[q.key] === 'Ya' ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-600'}`}>Ya</button>
-                    <button type="button" onClick={() => setEtika({ ...etika, [q.key]: 'Tidak' })} className={`px-3 py-1.5 text-xs font-bold rounded-lg ${etika[q.key] === 'Tidak' ? 'bg-rose-500 text-white' : 'bg-slate-100 text-slate-600'}`}>Tidak</button>
+
+          <div className="p-4 md:p-6">
+            <h3 className="font-bold mb-3 md:mb-4 uppercase text-xs md:text-sm tracking-wider text-rose-900">B. Indikator Etika (Ya / Tidak)</h3>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+              {etikaQ.map((q) => (
+                <div key={q.k} className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-3 bg-white border border-slate-200 shadow-sm rounded-xl">
+                  <span className="text-xs md:text-sm font-medium text-slate-800 mb-2 sm:mb-0">{q.l}</span>
+                  <div className="flex gap-1.5 w-full sm:w-auto">
+                    <button type="button" onClick={() => setEtika({ ...etika, [q.k]: 'Ya' })} className={`flex-1 sm:flex-none px-4 py-2 text-xs md:text-sm font-bold rounded-lg transition-colors ${etika[q.k] === 'Ya' ? 'bg-emerald-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Ya</button>
+                    <button type="button" onClick={() => setEtika({ ...etika, [q.k]: 'Tidak' })} className={`flex-1 sm:flex-none px-4 py-2 text-xs md:text-sm font-bold rounded-lg transition-colors ${etika[q.k] === 'Tidak' ? 'bg-rose-700 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>Tidak</button>
                   </div>
                 </div>
               ))}
             </div>
           </div>
-          <div className="p-6 bg-slate-50 border-t flex justify-end">
-            <button type="submit" disabled={isSubmitting} className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl disabled:opacity-50 transition-colors">
-              {isSubmitting ? 'Menyimpan...' : 'Simpan Penilaian Pegawai'}
+
+          <div className="p-4 md:p-6 bg-slate-50 border-t border-slate-200 flex justify-end">
+            <button type="submit" disabled={isSubmitting} className="w-full sm:w-auto px-8 py-3 bg-gradient-to-r from-rose-800 to-black hover:from-rose-900 text-amber-400 font-bold rounded-xl disabled:opacity-50 transition-all shadow-md text-sm">
+              {isSubmitting ? 'Menyimpan...' : 'Simpan Penilaian'}
             </button>
           </div>
         </form>
-      );
-    }
-
-    // ==========================================
-    // 5. KOMPONEN DASHBOARD STATISTIK TW
-    // ==========================================
-    function DashboardStats({ units }) {
-      const currentYear = new Date().getFullYear().toString();
-      const [year, setYear] = useState(currentYear);
-      const [tw, setTw] = useState('1'); // 1, 2, 3, 4
-      const [allStaff, setAllStaff] = useState([]);
-      const [evalRecords, setEvalRecords] = useState([]);
-      const [isLoading, setIsLoading] = useState(true);
-
-      useEffect(() => {
-        supabase.from('master_staff').select('unit_id, nama').then(({data}) => { if (data) setAllStaff(data); });
-      }, []);
-
-      useEffect(() => {
-        const fetchStats = async () => {
-          setIsLoading(true);
-          let startDate, endDate;
-          if (tw === '1') { startDate = `${year}-01-01`; endDate = `${year}-03-31`; }
-          else if (tw === '2') { startDate = `${year}-04-01`; endDate = `${year}-06-30`; }
-          else if (tw === '3') { startDate = `${year}-07-01`; endDate = `${year}-09-30`; }
-          else if (tw === '4') { startDate = `${year}-10-01`; endDate = `${year}-12-31`; }
-
-          // Filter record berdasarkan rentang tanggal
-          const { data } = await supabase.from('evaluation_records').select('unit_id, nama')
-            .gte('tanggal', startDate).lte('tanggal', endDate);
-            
-          if (data) setEvalRecords(data);
-          setIsLoading(false);
-        };
-        fetchStats();
-      }, [year, tw]);
-
-      // Kalkulasi data tabel per ruangan
-      const tableData = units.map(u => {
-        const staffInUnit = allStaff.filter(s => s.unit_id === u.id);
-        const totalStaff = staffInUnit.length;
-        
-        const evalsInUnit = evalRecords.filter(e => e.unit_id === u.id);
-        // Hitung nama unik yang sudah dinilai di triwulan ini
-        const uniqueEvaluated = new Set(evalsInUnit.map(e => e.nama.toLowerCase().trim())).size;
-        const percentage = totalStaff === 0 ? 0 : Math.round((uniqueEvaluated / totalStaff) * 100);
-
-        return { id: u.id, nama: u.nama, kategori: u.kategori, total: totalStaff, dinilai: uniqueEvaluated, percentage: Math.min(100, percentage) };
-      });
-
-      return (
-        <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-          <div className="p-6 border-b border-slate-200 bg-slate-50 flex flex-col md:flex-row items-center justify-between gap-4">
-            <div>
-              <h2 className="text-lg font-bold text-slate-800">📊 Dashboard Statistik Triwulan</h2>
-              <p className="text-sm text-slate-500">Pantau kelengkapan evaluasi pegawai per ruangan.</p>
-            </div>
-            <div className="flex gap-2">
-              <select value={year} onChange={e => setYear(e.target.value)} className="px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-slate-700">
-                <option value="2023">Tahun 2023</option>
-                <option value="2024">Tahun 2024</option>
-                <option value="2025">Tahun 2025</option>
-                <option value="2026">Tahun 2026</option>
-              </select>
-              <select value={tw} onChange={e => setTw(e.target.value)} className="px-4 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-bold text-blue-700 bg-blue-50">
-                <option value="1">Triwulan I (Jan - Mar)</option>
-                <option value="2">Triwulan II (Apr - Jun)</option>
-                <option value="3">Triwulan III (Jul - Sep)</option>
-                <option value="4">Triwulan IV (Okt - Des)</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            {isLoading ? (
-              <div className="p-12 text-center text-slate-500 font-bold">Mengkalkulasi Statistik...</div>
-            ) : (
-              <table className="w-full text-left text-sm border-collapse">
-                <thead className="bg-slate-100 text-slate-600">
-                  <tr>
-                    <th className="p-4 font-semibold border-b">No</th>
-                    <th className="p-4 font-semibold border-b">Nama Ruangan / Instalasi</th>
-                    <th className="p-4 font-semibold text-center border-b">Total Pegawai</th>
-                    <th className="p-4 font-semibold text-center border-b">Sudah Dinilai</th>
-                    <th className="p-4 font-semibold text-center border-b">Persentase (TW Ini)</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100">
-                  {tableData.sort((a,b) => b.percentage - a.percentage).map((row, index) => (
-                    <tr key={row.id} className="hover:bg-blue-50 transition-colors">
-                      <td className="p-4 font-mono text-slate-500">{index + 1}</td>
-                      <td className="p-4 font-bold text-slate-800">
-                        {row.nama} <span className="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded ml-1 font-normal">{row.kategori}</span>
-                      </td>
-                      <td className="p-4 text-center font-bold text-slate-600">{row.total}</td>
-                      <td className="p-4 text-center font-bold text-blue-600">{row.dinilai}</td>
-                      <td className="p-4 text-center">
-                        <div className="flex items-center gap-2 justify-center">
-                          <div className="w-24 bg-slate-200 rounded-full h-2.5 overflow-hidden">
-                            <div className={`h-2.5 rounded-full ${row.percentage >= 100 ? 'bg-emerald-500' : row.percentage >= 50 ? 'bg-amber-500' : 'bg-rose-500'}`} style={{ width: `${row.percentage}%` }}></div>
-                          </div>
-                          <span className={`text-xs font-bold w-10 text-left ${row.percentage >= 100 ? 'text-emerald-600' : row.percentage >= 50 ? 'text-amber-600' : 'text-rose-600'}`}>{row.percentage}%</span>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-          </div>
-        </div>
       );
     }
 
@@ -557,11 +616,15 @@
       const [units, setUnits] = useState([]);
       const [newUnit, setNewUnit] = useState({ nama: '', kategori: 'Ruangan' });
       const [isProcessing, setIsProcessing] = useState(false);
-      
       const [showPinModal, setShowPinModal] = useState(false);
       const [pinForm, setPinForm] = useState({ oldPin: '', newPin: '' });
+      
+      const [runningText, setRunningText] = useState('');
 
-      useEffect(() => { fetchUnits(); }, []);
+      useEffect(() => { 
+        fetchUnits(); 
+        supabase.from('app_settings').select('value').eq('id', 'running_text').single().then(({data}) => { if (data) setRunningText(data.value); });
+      }, []);
 
       const fetchUnits = async () => {
         const { data } = await supabase.from('master_units').select('*').order('nama');
@@ -573,15 +636,14 @@
         if (!newUnit.nama.trim()) return;
         setIsProcessing(true);
         const id = newUnit.nama.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)+/g, '');
-        
         const { error } = await supabase.from('master_units').insert([{ id, nama: newUnit.nama.toUpperCase(), kategori: newUnit.kategori }]);
-        if (error) alert('Gagal menambah ruangan: ' + error.message);
+        if (error) alert('Gagal: ' + error.message);
         else { alert('Ruangan berhasil ditambahkan!'); setNewUnit({ nama: '', kategori: 'Ruangan' }); fetchUnits(); }
         setIsProcessing(false);
       };
 
       const handleDeleteUnit = async (id) => {
-        if (!window.confirm('PERINGATAN! Menghapus ruangan akan MENGHAPUS SEMUA PEGAWAI di dalamnya. Tetap Lanjutkan?')) return;
+        if (!window.confirm('PERINGATAN! Menghapus ruangan akan MENGHAPUS SEMUA PEGAWAI di dalamnya. Lanjutkan?')) return;
         await supabase.from('master_units').delete().eq('id', id);
         fetchUnits();
       };
@@ -590,74 +652,72 @@
         e.preventDefault();
         if (pinForm.oldPin !== systemPin) return alert('PIN Lama salah!');
         if (pinForm.newPin.length < 6) return alert('PIN Baru minimal 6 digit!');
+        await supabase.from('app_settings').update({ value: pinForm.newPin }).eq('id', 'cpanel_pin');
+        alert('PIN C-Panel diubah!');
+        onUpdatePin(pinForm.newPin); setShowPinModal(false); setPinForm({ oldPin: '', newPin: '' });
+      };
 
-        const { error } = await supabase.from('app_settings').update({ value: pinForm.newPin }).eq('id', 'cpanel_pin');
-        if (error) {
-           // Fallback insert if row was missing
-           const { error: err2 } = await supabase.from('app_settings').insert([{ id: 'cpanel_pin', value: pinForm.newPin }]);
-           if (err2) return alert('Gagal mengubah PIN: ' + err2.message);
-        }
-        
-        alert('PIN Akses C-Panel berhasil diubah!');
-        onUpdatePin(pinForm.newPin);
-        setShowPinModal(false);
-        setPinForm({ oldPin: '', newPin: '' });
+      const handleSaveRunningText = async (e) => {
+        e.preventDefault();
+        setIsProcessing(true);
+        await supabase.from('app_settings').update({ value: runningText }).eq('id', 'running_text');
+        window.dispatchEvent(new CustomEvent('runningTextChanged', { detail: runningText }));
+        alert('Teks Berjalan berhasil diperbarui!');
+        setIsProcessing(false);
       };
 
       return (
         <div className="space-y-6">
-          {/* Modal Ubah PIN C-Panel */}
           {showPinModal && (
             <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-              <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-xl">
+              <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-xl border-t-8 border-slate-900">
                 <h3 className="text-lg font-bold text-slate-800 mb-4">Ubah PIN C-Panel</h3>
                 <form onSubmit={handleUpdatePin} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">PIN Lama</label>
-                    <input type="password" value={pinForm.oldPin} onChange={e=>setPinForm({...pinForm, oldPin: e.target.value})} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" required />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">PIN Baru (Min. 6 Karakter)</label>
-                    <input type="password" value={pinForm.newPin} onChange={e=>setPinForm({...pinForm, newPin: e.target.value})} minLength={6} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500" required />
-                  </div>
-                  <div className="flex gap-2 justify-end mt-6">
-                    <button type="button" onClick={() => setShowPinModal(false)} className="px-4 py-2 bg-slate-200 text-slate-700 font-bold rounded-lg text-sm">Batal</button>
-                    <button type="submit" className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-lg text-sm">Simpan PIN</button>
+                  <input type="password" placeholder="PIN Lama" value={pinForm.oldPin} onChange={e=>setPinForm({...pinForm, oldPin: e.target.value})} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-slate-900" required />
+                  <input type="password" placeholder="PIN Baru (Min 6 digit)" value={pinForm.newPin} onChange={e=>setPinForm({...pinForm, newPin: e.target.value})} minLength={6} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-slate-900" required />
+                  <div className="flex gap-2 justify-end mt-4">
+                    <button type="button" onClick={() => setShowPinModal(false)} className="px-4 py-2 bg-slate-200 rounded-lg text-sm font-bold">Batal</button>
+                    <button type="submit" className="px-4 py-2 bg-slate-900 text-amber-400 font-bold rounded-lg text-sm">Simpan</button>
                   </div>
                 </form>
               </div>
             </div>
           )}
 
-          <div className="bg-gradient-to-r from-purple-700 to-indigo-800 rounded-2xl p-6 text-white shadow-md flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div className="bg-slate-900 border-l-4 border-amber-500 rounded-2xl p-4 md:p-6 text-white flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-md">
             <div>
-              <h2 className="text-2xl font-bold mb-1">Control Panel (C-Panel)</h2>
-              <p className="text-purple-200 text-sm">Pusat kendali master data sistem rumah sakit.</p>
+              <h2 className="text-xl md:text-2xl font-bold text-amber-400">Control Panel (Admin)</h2>
+              <p className="text-slate-400 text-xs md:text-sm mt-1">Pusat kendali master data sistem.</p>
             </div>
-            <button onClick={() => setShowPinModal(true)} className="px-4 py-2.5 bg-white/20 hover:bg-white/30 rounded-xl text-sm font-bold transition-colors flex items-center gap-2">
-              Ubah PIN Akses
-            </button>
+            <button onClick={() => setShowPinModal(true)} className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-xl font-bold text-xs md:text-sm border border-slate-700 w-full md:w-auto">Ubah PIN C-Panel</button>
           </div>
-          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
-            <h3 className="font-bold text-lg text-slate-800 mb-4">Master Data Ruangan & Instalasi</h3>
-            <form onSubmit={handleAddUnit} className="flex flex-col md:flex-row gap-3 mb-6 p-4 bg-slate-50 rounded-xl border border-slate-200">
-              <input type="text" placeholder="Nama Ruangan/Unit Baru" value={newUnit.nama} onChange={e=>setNewUnit({...newUnit, nama: e.target.value})} className="flex-1 px-4 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500" required />
-              <select value={newUnit.kategori} onChange={e=>setNewUnit({...newUnit, kategori: e.target.value})} className="w-full md:w-48 px-4 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 bg-white">
-                <option value="Ruangan">Ruangan</option><option value="Instalasi">Instalasi</option><option value="Unit">Unit</option>
-              </select>
-              <button type="submit" disabled={isProcessing} className="px-6 py-2.5 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl disabled:opacity-50 transition-colors">+ Tambah Ruangan</button>
+
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6">
+            <h3 className="font-bold text-base md:text-lg text-slate-800 mb-4">Pengaturan Tampilan</h3>
+            <form onSubmit={handleSaveRunningText} className="flex flex-col md:flex-row gap-3">
+               <input type="text" value={runningText} onChange={e=>setRunningText(e.target.value)} className="flex-1 px-4 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-slate-900 text-sm" placeholder="Ketik teks berjalan..." required />
+               <button type="submit" disabled={isProcessing} className="px-6 py-2.5 bg-slate-900 hover:bg-black text-amber-400 font-bold rounded-xl disabled:opacity-50 text-sm">Simpan Teks</button>
+            </form>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 md:p-6">
+            <h3 className="font-bold text-base md:text-lg text-slate-800 mb-4">Master Data Ruangan</h3>
+            <form onSubmit={handleAddUnit} className="flex flex-col md:flex-row gap-3 mb-6 p-4 bg-slate-50 border border-slate-200 rounded-xl">
+              <input type="text" placeholder="Nama Ruangan/Unit Baru" value={newUnit.nama} onChange={e=>setNewUnit({...newUnit, nama: e.target.value})} className="flex-1 px-4 py-2 border rounded-xl text-sm focus:ring-2 focus:ring-slate-900" required />
+              <select value={newUnit.kategori} onChange={e=>setNewUnit({...newUnit, kategori: e.target.value})} className="px-4 py-2 border rounded-xl bg-white text-sm focus:ring-2 focus:ring-slate-900"><option>Ruangan</option><option>Instalasi</option><option>Unit</option></select>
+              <button type="submit" disabled={isProcessing} className="px-6 py-2 bg-slate-900 text-amber-400 font-bold rounded-xl text-sm">+ Tambah</button>
             </form>
             <div className="overflow-x-auto border border-slate-200 rounded-xl">
-              <table className="w-full text-left text-sm border-collapse">
-                <thead className="bg-slate-50 text-slate-600">
-                  <tr><th className="p-4 border-b">Kategori</th><th className="p-4 border-b">Nama Ruangan</th><th className="p-4 border-b">ID Sistem</th><th className="p-4 border-b text-center">Aksi</th></tr>
-                </thead>
-                <tbody>
+              <table className="w-full text-left text-xs md:text-sm">
+                <thead className="bg-slate-100 text-slate-700"><tr className="border-b border-slate-200">
+                  <th className="p-3 md:p-4">Kategori</th><th className="p-3 md:p-4">Nama Ruangan</th><th className="p-3 md:p-4 text-center">Aksi</th>
+                </tr></thead>
+                <tbody className="divide-y divide-slate-100">
                   {units.map(u => (
-                    <tr key={u.id} className="border-b border-slate-100 hover:bg-purple-50/30">
-                      <td className="p-4 text-xs font-bold text-slate-500"><span className="bg-slate-100 px-2 py-1 rounded-md">{u.kategori}</span></td>
-                      <td className="p-4 font-bold text-slate-800">{u.nama}</td><td className="p-4 font-mono text-xs text-slate-400">{u.id}</td>
-                      <td className="p-4 text-center"><button onClick={() => handleDeleteUnit(u.id)} className="px-3 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-xs font-bold transition-colors">Hapus</button></td>
+                    <tr key={u.id} className="hover:bg-slate-50">
+                      <td className="p-3 md:p-4"><span className="bg-slate-200 text-slate-700 px-2 py-1 rounded font-bold text-[10px] md:text-xs">{u.kategori}</span></td>
+                      <td className="p-3 md:p-4 font-bold text-slate-800">{u.nama}</td>
+                      <td className="p-3 md:p-4 text-center"><button onClick={() => handleDeleteUnit(u.id)} className="px-3 py-1 bg-rose-100 text-rose-700 font-bold rounded-lg text-xs hover:bg-rose-200">Hapus</button></td>
                     </tr>
                   ))}
                 </tbody>
@@ -680,141 +740,109 @@
       const [adminPin, setAdminPin] = useState('');
       const [systemPin, setSystemPin] = useState('987654321');
 
-      // State Ubah Password Ruangan
       const [showPassModal, setShowPassModal] = useState(false);
       const [passForm, setPassForm] = useState({ oldPin: '', newPin: '' });
 
       useEffect(() => {
         if (session) {
            supabase.from('master_units').select('*').order('nama').then(({data}) => { if (data) setMasterUnits(data); });
-           supabase.from('app_settings').select('*').eq('id', 'cpanel_pin').single().then(({data, error}) => { 
-               if (data) setSystemPin(data.value); 
-           });
+           supabase.from('app_settings').select('*').eq('id', 'cpanel_pin').single().then(({data}) => { if (data) setSystemPin(data.value); });
         }
       }, [session]);
 
       const handleUpdatePassword = async (e) => {
         e.preventDefault();
-        // Validasi password lama
-        if (passForm.oldPin !== session.password) {
-          return alert('Gagal! Password Lama yang Anda masukkan salah.');
-        }
-        if (passForm.newPin.length < 6) {
-          return alert('Password Baru minimal 6 karakter.');
-        }
-
-        // Simpan ke Supabase
+        if (passForm.oldPin !== session.password) return alert('Gagal! Password Lama salah.');
+        if (passForm.newPin.length < 6) return alert('Password Baru min 6 karakter.');
         const { error } = await supabase.from('master_units').update({ password: passForm.newPin }).eq('id', session.id);
-        if (error) {
-          alert('Gagal memperbarui password: ' + error.message);
-        } else {
-          alert('Password ruangan Anda berhasil diubah!');
-          setSession({ ...session, password: passForm.newPin }); // Update session lokal
-          setShowPassModal(false);
-          setPassForm({ oldPin: '', newPin: '' });
+        if (error) alert('Gagal: ' + error.message);
+        else {
+          alert('Password ruangan berhasil diubah!');
+          setSession({ ...session, password: passForm.newPin }); 
+          setShowPassModal(false); setPassForm({ oldPin: '', newPin: '' });
         }
       };
 
-      if (!session) return <LoginPage onLogin={setSession} />;
+      if (!session) return <LandingPage onLogin={setSession} />;
 
       return (
-        <div className="max-w-6xl mx-auto p-4 md:p-8 space-y-6">
+        <div className="flex flex-col flex-1 bg-slate-100">
+          <RunningTextBar />
           
-          {/* Modal Ubah Password */}
-          {showPassModal && (
-            <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-              <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-xl">
-                <h3 className="text-lg font-bold text-slate-800 mb-4">Ubah Password Ruangan</h3>
-                <form onSubmit={handleUpdatePassword} className="space-y-4">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">Password Lama</label>
-                    <input type="password" value={passForm.oldPin} onChange={e=>setPassForm({...passForm, oldPin: e.target.value})} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500" required />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 mb-1">Password Baru (Min. 6 Karakter)</label>
-                    <input type="password" value={passForm.newPin} onChange={e=>setPassForm({...passForm, newPin: e.target.value})} minLength={6} className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-amber-500" required />
-                  </div>
-                  <div className="flex gap-2 justify-end mt-6">
-                    <button type="button" onClick={() => setShowPassModal(false)} className="px-4 py-2 bg-slate-200 text-slate-700 font-bold rounded-lg text-sm">Batal</button>
-                    <button type="submit" className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white font-bold rounded-lg text-sm">Simpan</button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          )}
-
-          {/* Header Dashboard */}
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
-              <img src="./logo_atma.png" alt="Logo" className="w-14 h-14 object-contain" />
-              <div>
-                <h1 className="text-xl font-bold text-slate-900">Dashboard Kepala Ruangan</h1>
-                <p className="text-blue-600 font-bold text-sm mt-0.5">📍 {session.nama}</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <button onClick={() => setShowPassModal(true)} className="px-4 py-2 bg-amber-50 hover:bg-amber-100 text-amber-700 font-bold rounded-xl transition-colors text-sm">
-                🔑 Ubah Password
-              </button>
-              <button onClick={() => setSession(null)} className="px-4 py-2 bg-slate-100 hover:bg-rose-50 hover:text-rose-600 text-slate-600 font-bold rounded-xl transition-colors text-sm">
-                Keluar Akun
-              </button>
-            </div>
-          </div>
-
-          {/* Navigation Tabs */}
-          <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-            <button onClick={() => setActiveTab('input')} className={`px-5 py-2.5 rounded-xl font-bold text-sm whitespace-nowrap transition-all ${activeTab === 'input' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}>
-              📝 Input Evaluasi
-            </button>
-            <button onClick={() => setActiveTab('recap')} className={`px-5 py-2.5 rounded-xl font-bold text-sm whitespace-nowrap transition-all ${activeTab === 'recap' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}>
-              📊 Rekap & Cari Data
-            </button>
-            <button onClick={() => setActiveTab('staff')} className={`px-5 py-2.5 rounded-xl font-bold text-sm whitespace-nowrap transition-all ${activeTab === 'staff' ? 'bg-blue-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}>
-              👥 Edit Data Pegawai
-            </button>
-            <button onClick={() => setActiveTab('stats')} className={`px-5 py-2.5 rounded-xl font-bold text-sm whitespace-nowrap transition-all ${activeTab === 'stats' ? 'bg-emerald-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200 hover:bg-emerald-50 hover:text-emerald-700'}`}>
-              📈 Dashboard Statistik
-            </button>
-            {/* Tombol C-Panel hanya muncul untuk INSTALASI ADMIN SISTEM */}
-            {session.nama === 'INSTALASI ADMIN SISTEM' && (
-              <button onClick={() => setActiveTab('cpanel')} className={`px-5 py-2.5 rounded-xl font-bold text-sm whitespace-nowrap transition-all ${activeTab === 'cpanel' ? 'bg-purple-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200 hover:bg-purple-50 hover:text-purple-700'}`}>
-                ⚙️ C-Panel (Admin)
-              </button>
-            )}
-          </div>
-
-          {/* Content Area */}
-          <div>
-            {activeTab === 'input' && <EvaluasiForm session={session} />}
-            {activeTab === 'recap' && <RecapView session={session} />}
-            {activeTab === 'staff' && <StaffManager session={session} units={masterUnits} />}
-            {activeTab === 'stats' && <DashboardStats units={masterUnits} />}
+          <div className="w-full max-w-7xl mx-auto p-2 sm:p-4 md:p-8 space-y-4 md:space-y-6 flex-1">
             
-            {/* Otorisasi C-Panel */}
-            {activeTab === 'cpanel' && session.nama === 'INSTALASI ADMIN SISTEM' && (
-              !isAdminVerified ? (
-                <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-8 max-w-sm mx-auto mt-10">
-                  <div className="flex justify-center mb-4">
-                    <div className="p-4 bg-purple-100 text-purple-600 rounded-full">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+            {showPassModal && (
+              <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                <div className="bg-white rounded-3xl w-full max-w-sm p-6 md:p-8 shadow-2xl border-t-8 border-rose-800">
+                  <h3 className="text-xl font-bold text-slate-800 mb-6">Ubah Password Ruangan</h3>
+                  <form onSubmit={handleUpdatePassword} className="space-y-4">
+                    <input type="password" placeholder="Password Lama" value={passForm.oldPin} onChange={e=>setPassForm({...passForm, oldPin: e.target.value})} className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-800 focus:outline-none" required />
+                    <input type="password" placeholder="Password Baru (Min 6 char)" value={passForm.newPin} onChange={e=>setPassForm({...passForm, newPin: e.target.value})} minLength={6} className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-800 focus:outline-none" required />
+                    <div className="flex gap-3 justify-end mt-6">
+                      <button type="button" onClick={() => setShowPassModal(false)} className="px-5 py-2.5 bg-slate-100 text-slate-700 font-bold rounded-xl hover:bg-slate-200">Batal</button>
+                      <button type="submit" className="px-5 py-2.5 bg-rose-800 text-white font-bold rounded-xl hover:bg-rose-900">Simpan</button>
                     </div>
-                  </div>
-                  <h2 className="text-xl font-bold text-slate-800 text-center mb-2">Akses C-Panel</h2>
-                  <p className="text-xs text-slate-500 text-center mb-6">Hanya untuk Superadmin. Masukkan PIN Akses.</p>
-                  <form onSubmit={(e) => {
-                    e.preventDefault();
-                    if (adminPin === systemPin) {
-                      setIsAdminVerified(true); setAdminPin('');
-                    } else { alert('PIN Salah!'); setAdminPin(''); }
-                  }}>
-                    <input type="password" value={adminPin} onChange={e => setAdminPin(e.target.value)} placeholder="Masukkan PIN..." className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:outline-none mb-4 text-center font-bold tracking-widest text-lg" required />
-                    <button type="submit" className="w-full py-3 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded-xl transition-colors">Buka C-Panel</button>
                   </form>
                 </div>
-              ) : ( <CPanel systemPin={systemPin} onUpdatePin={setSystemPin} /> )
+              </div>
             )}
+
+            {/* Header Dashboard Internal */}
+            <div className="bg-white p-4 md:p-6 rounded-2xl md:rounded-3xl shadow-sm border-b-4 border-amber-500 flex flex-col md:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-3 md:gap-4">
+                <img src="./logo_atma.png" alt="Logo" className="w-12 h-12 md:w-14 md:h-14 object-contain bg-slate-100 rounded-full p-1 border border-slate-200" />
+                <div className="text-center md:text-left">
+                  <h1 className="text-lg md:text-xl font-extrabold text-slate-900 uppercase">Dashboard Evaluator</h1>
+                  <p className="text-rose-700 font-bold text-xs md:text-sm mt-0.5">📍 {session.nama}</p>
+                </div>
+              </div>
+              <div className="flex w-full md:w-auto gap-2">
+                <button onClick={() => setShowPassModal(true)} className="flex-1 md:flex-none px-4 py-2.5 bg-slate-900 hover:bg-black text-amber-400 font-bold rounded-xl transition-colors text-xs md:text-sm border border-slate-700">🔑 Ubah Password</button>
+                <button onClick={() => setSession(null)} className="flex-1 md:flex-none px-4 py-2.5 bg-rose-100 hover:bg-rose-200 text-rose-800 font-bold rounded-xl transition-colors text-xs md:text-sm">🚪 Keluar</button>
+              </div>
+            </div>
+
+            {/* Navigation Tabs Scrollable for Mobile */}
+            <div className="flex gap-2 overflow-x-auto pb-2 hide-scrollbar">
+              <button onClick={() => setActiveTab('input')} className={`px-4 md:px-5 py-2.5 rounded-xl font-bold text-xs md:text-sm whitespace-nowrap transition-all ${activeTab === 'input' ? 'bg-gradient-to-r from-rose-800 to-slate-900 text-amber-400 shadow-md border-b-2 border-amber-400' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}>📝 Input Evaluasi</button>
+              <button onClick={() => setActiveTab('recap')} className={`px-4 md:px-5 py-2.5 rounded-xl font-bold text-xs md:text-sm whitespace-nowrap transition-all ${activeTab === 'recap' ? 'bg-gradient-to-r from-rose-800 to-slate-900 text-amber-400 shadow-md border-b-2 border-amber-400' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}>📊 Rekap Data</button>
+              <button onClick={() => setActiveTab('staff')} className={`px-4 md:px-5 py-2.5 rounded-xl font-bold text-xs md:text-sm whitespace-nowrap transition-all ${activeTab === 'staff' ? 'bg-gradient-to-r from-rose-800 to-slate-900 text-amber-400 shadow-md border-b-2 border-amber-400' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}>👥 Data Pegawai</button>
+              <button onClick={() => setActiveTab('stats')} className={`px-4 md:px-5 py-2.5 rounded-xl font-bold text-xs md:text-sm whitespace-nowrap transition-all ${activeTab === 'stats' ? 'bg-gradient-to-r from-rose-800 to-slate-900 text-amber-400 shadow-md border-b-2 border-amber-400' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}>📈 Statistik</button>
+              
+              {session.nama === 'INSTALASI ADMIN SISTEM' && (
+                <button onClick={() => setActiveTab('cpanel')} className={`px-4 md:px-5 py-2.5 rounded-xl font-bold text-xs md:text-sm whitespace-nowrap transition-all ${activeTab === 'cpanel' ? 'bg-slate-900 text-amber-400 shadow-md border-b-2 border-amber-400' : 'bg-white text-slate-600 border border-slate-200'}`}>⚙️ C-Panel (Admin)</button>
+              )}
+            </div>
+
+            <div className="pb-10">
+              {activeTab === 'input' && <EvaluasiForm session={session} />}
+              {activeTab === 'recap' && <RecapView session={session} />}
+              {activeTab === 'staff' && <StaffManager session={session} units={masterUnits} />}
+              {activeTab === 'stats' && <DashboardStats units={masterUnits} />}
+              
+              {activeTab === 'cpanel' && session.nama === 'INSTALASI ADMIN SISTEM' && (
+                !isAdminVerified ? (
+                  <div className="bg-white rounded-3xl shadow-xl border-t-8 border-slate-900 p-8 max-w-sm mx-auto mt-10">
+                    <h2 className="text-xl font-extrabold text-center mb-2 text-slate-900">Akses C-Panel</h2>
+                    <p className="text-xs text-center text-slate-500 mb-6">Masukkan PIN Superadmin</p>
+                    <form onSubmit={(e) => { e.preventDefault(); if (adminPin === systemPin) { setIsAdminVerified(true); setAdminPin(''); } else { alert('PIN Salah!'); setAdminPin(''); } }}>
+                      <input type="password" value={adminPin} onChange={e => setAdminPin(e.target.value)} placeholder="• • • • • •" className="w-full px-4 py-4 bg-slate-50 border border-slate-300 rounded-xl text-center font-bold tracking-[0.5em] text-xl mb-4 focus:ring-2 focus:ring-slate-900 outline-none" required />
+                      <button type="submit" className="w-full py-3.5 bg-slate-900 hover:bg-black text-amber-400 font-bold rounded-xl transition-all shadow-md">Buka Kunci</button>
+                    </form>
+                  </div>
+                ) : ( <CPanel systemPin={systemPin} onUpdatePin={setSystemPin} /> )
+              )}
+            </div>
           </div>
+          
+          <footer className="bg-slate-900 text-slate-400 py-6 md:py-8 mt-auto border-t-4 border-rose-900">
+            <div className="max-w-7xl mx-auto px-4 text-center">
+              <p className="text-xs md:text-sm font-medium tracking-wide text-slate-300">
+                Didesain dan dikembangkan oleh : <strong className="text-amber-400">Riandy, S.Kep</strong>
+              </p>
+              <p className="text-[10px] md:text-xs mt-1.5 text-slate-500">© 2024 RSJD Atma Husada Mahakam. Hak Cipta Dilindungi.</p>
+            </div>
+          </footer>
         </div>
       );
     }
