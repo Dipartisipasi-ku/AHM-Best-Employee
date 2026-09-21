@@ -349,19 +349,25 @@
         if (val === 'NEW' || val === '') setForm({ nama: '', jabatan: '', unit_id: session.id });
         else {
           const staff = allStaff.find(s => s.id === val);
-          if (staff) setForm({ nama: staff.nama, jabatan: staff.jabatan || '', unit_id: staff.unit_id });
+          if (staff) {
+            // Cek apakah ruangan pegawai ini masih ada di database master ruangan
+            const unitExists = units.some(u => u.id === staff.unit_id);
+            setForm({ nama: staff.nama, jabatan: staff.jabatan || '', unit_id: unitExists ? staff.unit_id : '' });
+          }
         }
       };
 
       const handleEditFromTable = (s) => {
         setSelectedStaffId(s.id);
-        setForm({ nama: s.nama, jabatan: s.jabatan || '', unit_id: s.unit_id });
+        const unitExists = units.some(u => u.id === s.unit_id);
+        setForm({ nama: s.nama, jabatan: s.jabatan || '', unit_id: unitExists ? s.unit_id : '' });
         window.scrollTo({ top: 0, behavior: 'smooth' });
       };
 
       const handleSave = async (e) => {
         e.preventDefault();
         if (!form.nama.trim()) return alert('Nama pegawai wajib diisi!');
+        if (!form.unit_id) return alert('Silakan pilih penempatan ruangan / unit tugas pegawai terlebih dahulu!');
         setIsProcessing(true);
 
         if (selectedStaffId === 'NEW') {
@@ -435,8 +441,14 @@
                     <input type="text" value={form.jabatan} onChange={e=>setForm({...form, jabatan: e.target.value})} className="w-full px-3 py-2.5 border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-800 text-sm" />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-xs font-bold text-slate-700 mb-1.5">Ruangan / Unit Tugas (Ubah untuk memindah pegawai)</label>
-                    <select value={form.unit_id} onChange={e=>setForm({...form, unit_id: e.target.value})} className="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-800 focus:outline-none text-sm">
+                    <label className="block text-xs font-bold text-slate-700 mb-1.5">Ruangan / Unit Tugas (Ubah untuk memindah/menempatkan pegawai)</label>
+                    <select 
+                      value={form.unit_id || ''} 
+                      onChange={e=>setForm({...form, unit_id: e.target.value})} 
+                      className="w-full px-3 py-2.5 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-800 focus:outline-none text-sm"
+                      required
+                    >
+                      <option value="" disabled>-- Pilih / Tempatkan ke Ruangan --</option>
                       {units.map(u => <option key={u.id} value={u.id}>[{u.kategori}] {u.nama}</option>)}
                     </select>
                   </div>
