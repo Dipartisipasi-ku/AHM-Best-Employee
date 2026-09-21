@@ -215,9 +215,14 @@
     // 2. KOMPONEN DASHBOARD STATISTIK TW
     // ==========================================
     function DashboardStats({ units }) {
-      const currentYear = new Date().getFullYear().toString();
+      // Deteksi Tahun dan Triwulan saat ini secara otomatis
+      const today = new Date();
+      const currentYear = today.getFullYear().toString();
+      const currentMonth = today.getMonth() + 1; // 1-12
+      const currentTriwulan = Math.ceil(currentMonth / 3).toString(); // Menghasilkan '1', '2', '3', atau '4'
+
       const [year, setYear] = useState(currentYear);
-      const [tw, setTw] = useState('1'); 
+      const [tw, setTw] = useState(currentTriwulan); // Otomatis tersetel ke Triwulan saat ini
       const [allStaff, setAllStaff] = useState([]);
       const [evalRecords, setEvalRecords] = useState([]);
       const [isLoading, setIsLoading] = useState(true);
