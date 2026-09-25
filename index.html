@@ -568,7 +568,6 @@
 
       const handleExportExcel = () => {
         try {
-          // Cek apakah library XLSX berhasil dimuat
           if (typeof window.XLSX === 'undefined') {
             alert('Library Excel belum dimuat dengan benar. Pastikan koneksi internet lancar dan script XLSX ada di <head>.');
             return;
@@ -579,21 +578,33 @@
           const exportData = filteredRecords.map((r, index) => {
             const avgSkala = ((r.seragam + r.atribut + r.sepatu + r.salam)/4).toFixed(1);
             const totalYa = [r.id_card, r.pin_logo, r.salam_prima, r.seragam_aturan, r.ramah_sopan, r.tanggung_jawab, r.tolak_hadiah, r.sesuai_wewenang, r.hadir_rapat, r.bekerja_penuh_tj].filter(v => v === 'Ya').length;
+            
             return {
               'No': index + 1,
               'Tanggal': r.tanggal,
               'Nama Pegawai': r.nama,
               'Ruangan / Unit': r.unit_nama,
+              // Kategori Skala
               'Nilai Skala': avgSkala,
+              'Skala Seragam': r.seragam,
+              'Skala Atribut': r.atribut,
+              'Skala Sepatu': r.sepatu,
+              'Skala Salam': r.salam,
+              // Kategori Etika
               'Total Etika (Ya)': totalYa,
-              'Seragam': r.seragam,
-              'Atribut': r.atribut,
-              'Sepatu': r.sepatu,
-              'Salam': r.salam
+              'ID Card': r.id_card,
+              'Pin Logo': r.pin_logo,
+              'Salam Prima (Etika)': r.salam_prima,
+              'Seragam Sesuai Aturan': r.seragam_aturan,
+              'Ramah & Sopan': r.ramah_sopan,
+              'Tanggung Jawab & Jujur': r.tanggung_jawab,
+              'Tolak Gratifikasi': r.tolak_hadiah,
+              'Sesuai Wewenang': r.sesuai_wewenang,
+              'Hadir Rapat/Dinas': r.hadir_rapat,
+              'Bekerja Penuh TJ': r.bekerja_penuh_tj
             };
           });
 
-          // Menggunakan window.XLSX agar terdeteksi oleh React/Babel
           const worksheet = window.XLSX.utils.json_to_sheet(exportData);
           const workbook = window.XLSX.utils.book_new();
           window.XLSX.utils.book_append_sheet(workbook, worksheet, "Rekap Evaluasi");
