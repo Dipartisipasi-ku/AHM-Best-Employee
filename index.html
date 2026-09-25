@@ -6,6 +6,14 @@
   <title>AHM Best Employee - Sistem Evaluasi Kepatuhan Pegawai</title>
   
   <!-- Load Tailwind CSS -->
+   <!-- Load React, Babel, & Supabase -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- TAMBAHKAN INI UNTUK EXCEL -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   
@@ -559,29 +567,42 @@
       };
 
       const handleExportExcel = () => {
-        if (filteredRecords.length === 0) return alert('Tidak ada data untuk diekspor!');
-        
-        const exportData = filteredRecords.map((r, index) => {
-          const avgSkala = ((r.seragam + r.atribut + r.sepatu + r.salam)/4).toFixed(1);
-          const totalYa = [r.id_card, r.pin_logo, r.salam_prima, r.seragam_aturan, r.ramah_sopan, r.tanggung_jawab, r.tolak_hadiah, r.sesuai_wewenang, r.hadir_rapat, r.bekerja_penuh_tj].filter(v => v === 'Ya').length;
-          return {
-            'No': index + 1,
-            'Tanggal': r.tanggal,
-            'Nama Pegawai': r.nama,
-            'Ruangan / Unit': r.unit_nama,
-            'Nilai Skala': avgSkala,
-            'Total Etika (Ya)': totalYa,
-            'Seragam': r.seragam,
-            'Atribut': r.atribut,
-            'Sepatu': r.sepatu,
-            'Salam': r.salam
-          };
-        });
+        try {
+          // Cek apakah library XLSX berhasil dimuat
+          if (typeof window.XLSX === 'undefined') {
+            alert('Library Excel belum dimuat dengan benar. Pastikan koneksi internet lancar dan script XLSX ada di <head>.');
+            return;
+          }
 
-        const worksheet = XLSX.utils.json_to_sheet(exportData);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Rekap Evaluasi");
-        XLSX.writeFile(workbook, `Rekap_Evaluasi_${filterTahun}_TW${filterTw}.xlsx`);
+          if (filteredRecords.length === 0) return alert('Tidak ada data untuk diekspor!');
+          
+          const exportData = filteredRecords.map((r, index) => {
+            const avgSkala = ((r.seragam + r.atribut + r.sepatu + r.salam)/4).toFixed(1);
+            const totalYa = [r.id_card, r.pin_logo, r.salam_prima, r.seragam_aturan, r.ramah_sopan, r.tanggung_jawab, r.tolak_hadiah, r.sesuai_wewenang, r.hadir_rapat, r.bekerja_penuh_tj].filter(v => v === 'Ya').length;
+            return {
+              'No': index + 1,
+              'Tanggal': r.tanggal,
+              'Nama Pegawai': r.nama,
+              'Ruangan / Unit': r.unit_nama,
+              'Nilai Skala': avgSkala,
+              'Total Etika (Ya)': totalYa,
+              'Seragam': r.seragam,
+              'Atribut': r.atribut,
+              'Sepatu': r.sepatu,
+              'Salam': r.salam
+            };
+          });
+
+          // Menggunakan window.XLSX agar terdeteksi oleh React/Babel
+          const worksheet = window.XLSX.utils.json_to_sheet(exportData);
+          const workbook = window.XLSX.utils.book_new();
+          window.XLSX.utils.book_append_sheet(workbook, worksheet, "Rekap Evaluasi");
+          window.XLSX.writeFile(workbook, `Rekap_Evaluasi_${filterTahun}_TW${filterTw}_${filterUnit === 'ALL' ? 'Semua' : 'Ruangan'}.xlsx`);
+          
+        } catch (error) {
+          console.error("Error Export:", error);
+          alert("Gagal melakukan export: " + error.message);
+        }
       };
 
       const filteredRecords = records.filter(r => r.nama.toLowerCase().includes(filterNama.toLowerCase()));
